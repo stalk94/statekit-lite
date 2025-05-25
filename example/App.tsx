@@ -1,5 +1,4 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
 import { createStore } from '../src/index';
 
 
@@ -9,52 +8,59 @@ const userStore = createStore({
         age: 25
     }
 },{
-    persist: { 
-        key: 'user'
-    },
-    devtools: { 
-        name: "userStore" 
-    }
+    //persist: { key: 'user' },
+    devtools: { name: "userStore" },
+    immer: true
 });
 
 
-function Display() {
+
+export function Display() {
     const user = userStore.user.use();
 
-
     return (
-        <div style={{marginLeft: '45%', marginTop: '15%', fontSize:'24px', color: 'silver'}}>
-            {  user.age }
-        </div>
+        <pre style={{ marginLeft: '35%', marginTop: '5%', fontSize: '24px', color: '#c5f467' }}>
+            { JSON.stringify(user, null, 2) }
+        </pre>
     );
 }
 
-function Updater() {
-    React.useEffect(() => {
-        const i = setInterval(() => {
-            userStore.user.arr[1].set({t: 1})
-            userStore.user.test.test.set({a: 1});
-            
-            userStore.user.age.set((age)=> age + 1);
 
-            console.log(userStore.user.get())
+export function Updater() {
+    const ref = React.useRef<any>(null);
+
+    const useMutNested =()=> {
+        // 🔥 creates nested object structure
+        if(!userStore.user?.test?.test?.get()) userStore.user.test.test.set(1); 
+        // updates with function
+        userStore.user.test.test.set(count => count + 1);
+    }
+    const useMutNestedArray = () => {
+        // ⚡️ creates nested array structure
+        if (userStore?.user?.arr?.[0]?.test.get()) {
+            userStore?.user?.arr?.[0]?.test.set((p) => {
+                console.log(p);
+                return p + 1;
+            });
+        }
+        else {
+            userStore?.user?.arr?.[0]?.test.set(1);
+        }
+    }
+
+    React.useEffect(() => {
+        ref.current = setInterval(() => {
+            userStore.user.age.set((prev)=> {
+                prev++;
+                return prev;
+            });
+            useMutNested();
+            useMutNestedArray();
         }, 1000);
 
-        return () => clearInterval(i);
+
+        return () => clearInterval(ref.current);
     }, []);
 
     return null;
 }
-
-// Root component
-export function App() {
-    return (
-        <div>
-            <Updater />
-            <Display />
-        </div>
-    );
-}
-
-
-createRoot(document.querySelector(".root")).render(<App/>);

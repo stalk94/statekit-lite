@@ -58,6 +58,8 @@ interface StoreOptions {
     persist?: PersistConfig;
     /** ⚛️ enable redux dev tool log */
     devtools?: boolean | { name: string };
+    /** 🔧 default: false */
+    immer?: boolean;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -172,7 +174,11 @@ export function createStore<T extends object>(
              */
             set: (val: any) => {
                 const prev = getByPath(store.get(), path);
-                const next = typeof val === "function" ? produce(prev, val) : val;
+
+                const next = typeof val === "function"
+                    ? options.immer ? produce(prev, val) : val(prev)
+                    : val;
+
                 lastUpdatedPath = pathStr;
                 store.set(setByPath(store.get(), path, next));
             },

@@ -91,7 +91,7 @@ function createStore(initialValue, options = {}) {
        */
       set: (val) => {
         const prev = getByPath(store.get(), path);
-        const next = typeof val === "function" ? produce(prev, val) : val;
+        const next = typeof val === "function" ? options.immer ? produce(prev, val) : val(prev) : val;
         lastUpdatedPath = pathStr;
         store.set(setByPath(store.get(), path, next));
       },

@@ -50,6 +50,8 @@ interface StoreOptions {
     devtools?: boolean | {
         name: string;
     };
+    /** 🔧 default: false */
+    immer?: boolean;
 }
 declare function createStore<T extends object>(initialValue: T, options?: StoreOptions): ProxyState<T>;
 

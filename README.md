@@ -51,7 +51,8 @@ const userStore = createStore({
   },
   devtools: {
     name: "userStore"
-  }
+  },
+  immer: true
 });
 
 // Component that shows state
