@@ -1,5 +1,16 @@
 // src/index.ts
 import { useSyncExternalStore } from "react";
+import { produce } from "immer";
+function safeClone(obj) {
+  if (typeof obj !== "object" || obj === null) return obj;
+  if (Array.isArray(obj)) return obj.map(safeClone);
+  const result = {};
+  for (const key in obj) {
+    const val = obj[key];
+    result[key] = typeof val === "function" ? val : safeClone(val);
+  }
+  return result;
+}
 function getByPath(obj, path) {
   return path.reduce((acc, key) => acc?.[key], obj);
 }
@@ -65,11 +76,23 @@ function createStore(initialValue, options = {}) {
   function createProxy(path) {
     const pathStr = pathToString(path);
     const api = {
-      get: () => getByPath(store.get(), path),
+      /** 
+       *  🔗 `.get()` - object references,     
+       *  🗐  `.get(true)`- structured clone 
+       */
+      get: (clone = false) => {
+        const val = getByPath(store.get(), path);
+        return clone ? structuredClone(val) : val;
+      },
+      /**
+       *  📌 `.set(value)` — direct replace   
+       *  🔁 `.set(prev => next)` — functional update  
+       *  🧠 `.set(draft => { draft.x = 1 })` — safe mutation via Immer   
+       */
       set: (val) => {
         const prev = getByPath(store.get(), path);
-        const next = typeof val === "function" ? val(prev) : val;
-        lastUpdatedPath = pathToString(path);
+        const next = typeof val === "function" ? produce(prev, val) : val;
+        lastUpdatedPath = pathStr;
         store.set(setByPath(store.get(), path, next));
       },
       update: (fn) => {
@@ -77,10 +100,42 @@ function createStore(initialValue, options = {}) {
         const next = fn(current);
         store.set(setByPath(store.get(), path, next));
       },
+      /**
+       *  ⚛️ React hook that subscribes to this value. Automatically triggers re-render when value changes  
+       *
+       *  📌 Must be called inside a React component or hook  
+       *  Equivalent to `.get()` but reactive  
+       *
+       *  @returns Current value of the state at this path
+       */
       use: () => useSyncExternalStore(
         store.subscribe,
         () => getByPath(store.get(), path)
       ),
+      /**
+       *  👁 Subscribes to external (non-React) changes  
+       *  Useful for triggering side effects when a value changes  
+       *
+       *  Unlike `.use()`, works outside of React lifecycle  
+       *  You must manually unsubscribe to avoid memory leaks
+       * 
+       * @example
+       *  const unsubscribe = state.user.name.watch((val) => {
+       *      console.log("Changed:", val);
+       *  });
+       * // later
+       *  unsubscribe();
+       * 
+       * // or ract useEffect
+       * useEffect(() => {
+       *      const unsub = state.user.name.watch(console.log);
+       *      return unsub; // cleanup on unmount
+       *   }, []);
+       * 
+       * 
+       *  @param callback Function to call when value changes  
+       *  @returns Unsubscribe function
+       */
       watch: (fn) => {
         if (!watchers.has(pathStr)) {
           watchers.set(pathStr, /* @__PURE__ */ new Set());
@@ -88,7 +143,18 @@ function createStore(initialValue, options = {}) {
         const set = watchers.get(pathStr);
         set.add(fn);
         return () => set.delete(fn);
-      }
+      },
+      /**
+       *  🗐 Returns a deep copy of the current value  
+       *  Safe to mutate or serialize (e.g. for export, snapshot, send to server)  
+       *
+       *  Functions and components are preserved by reference  
+       *  Proxy and reactivity are stripped
+       *
+       *  @returns Deep cloned plain value
+       */
+      export: () => safeClone(getByPath(store.get(), path)),
+      toJSON: () => getByPath(store.get(), path)
     };
     return new Proxy(api, {
       get(target, prop) {
