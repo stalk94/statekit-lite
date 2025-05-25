@@ -1,6 +1,6 @@
 {
     "name": "statekit-lite",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "author": "stalk94",
     "description": "Minimal proxy-based global state manager for React with nested access, persist, watch, and devtools.",
     "main": "src/index.ts",
@@ -10,16 +10,25 @@
     "license": "MIT",
     "scripts": {
         "build": "tsup src/index.ts --format esm,cjs --dts",
-        "dev": "vite"
+        "dev": "vite",
+        "build:demo": "vite build"
     },
     "keywords": [
         "react",
         "state",
         "store",
         "proxy",
+        "reactive",
+        "reactivity",
+        "state management",
+        "redux-devtools",
         "persist",
         "watch",
-        "redux-devtools"
+        "immer",
+        "lightweight",
+        "hook",
+        "observable",
+        "redux alternative"
     ],
     "devDependencies": {
         "@vitejs/plugin-react": "^4.5.0",

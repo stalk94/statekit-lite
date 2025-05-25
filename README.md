@@ -2,7 +2,7 @@
 
 A minimal global state manager for React  
 
-- 🔥 has no dependencies (except react)
+- 🔥 has no dependencies (except immer)
 - ⚛️ Fully typed reactive access 
 - 🔁 `.get()`, `.set()`, `.use()` and `.watch()` on any nested path  
 - 📦 Redux DevTools compatible 
