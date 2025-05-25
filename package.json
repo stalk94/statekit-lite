@@ -1,0 +1,33 @@
+{
+    "name": "statekit-lite",
+    "version": "1.0.0",
+    "author": "stalk94",
+    "main": "src/index.ts",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "license": "MIT",
+    "scripts": {
+        "build": "tsup src/index.ts --format esm,cjs --dts",
+        "dev": "vite",
+        "test": "vitest"
+    },
+    "keywords": [
+        "react",
+        "state",
+        "global",
+        "proxy"
+    ],
+    "devDependencies": {
+        "react-dom": "^18.1.0",
+        "tsup": "^8.5.0",
+        "typescript": "^5.8.3",
+        "vite": "^6.3.5"
+    },
+    "peerDependencies": {
+        "react": "^18.1.0"
+    },
+    "dependencies": {
+        "@vitejs/plugin-react": "^4.5.0"
+    }
+}
