@@ -108,11 +108,13 @@ export function createStore<T extends object>(
     let devtools: any = null;
     let lastUpdatedPath: string | null = null;
 
-    if (typeof window !== "undefined" && options.devtools) {
+    if (typeof window !== 'undefined' && options.devtools) {
         const ext = (window as any).__REDUX_DEVTOOLS_EXTENSION__;
-        if (ext) {
-            devtools = ext.connect({ name: typeof options.devtools === 'object' ? options.devtools.name ?? "statekit" : "statekit" });
-            devtools.init(value);
+        if (ext?.connect) {
+            devtools = ext.connect({
+                name: typeof options.devtools === 'object' ? options.devtools.name ?? 'statekit' : 'statekit'
+            });
+            devtools.init(safeClone(value));
         }
     }
     if (typeof window !== "undefined" && key) {
@@ -139,7 +141,7 @@ export function createStore<T extends object>(
                 localStorage.setItem(key, JSON.stringify(value));
             }
             if (devtools) {
-                devtools.send({ type: `[set] ${lastUpdatedPath ?? "unknown"}` }, value);
+                devtools.send({ type: `[set] ${lastUpdatedPath ?? "unknown"}` }, safeClone(value));
             }
 
             notify();

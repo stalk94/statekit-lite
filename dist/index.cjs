@@ -56,9 +56,11 @@ function createStore(initialValue, options = {}) {
   let lastUpdatedPath = null;
   if (typeof window !== "undefined" && options.devtools) {
     const ext = window.__REDUX_DEVTOOLS_EXTENSION__;
-    if (ext) {
-      devtools = ext.connect({ name: typeof options.devtools === "object" ? options.devtools.name ?? "statekit" : "statekit" });
-      devtools.init(value);
+    if (ext?.connect) {
+      devtools = ext.connect({
+        name: typeof options.devtools === "object" ? options.devtools.name ?? "statekit" : "statekit"
+      });
+      devtools.init(safeClone(value));
     }
   }
   if (typeof window !== "undefined" && key) {
@@ -82,7 +84,7 @@ function createStore(initialValue, options = {}) {
         localStorage.setItem(key, JSON.stringify(value));
       }
       if (devtools) {
-        devtools.send({ type: `[set] ${lastUpdatedPath ?? "unknown"}` }, value);
+        devtools.send({ type: `[set] ${lastUpdatedPath ?? "unknown"}` }, safeClone(value));
       }
       notify();
       watchers.forEach((fns, pathStr) => {
