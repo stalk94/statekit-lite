@@ -19,9 +19,12 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
-  createStore: () => createStore
+  createStore: () => createStore,
+  ssePlugin: () => ssePlugin
 });
 module.exports = __toCommonJS(index_exports);
+
+// src/store.ts
 var import_react = require("react");
 var import_immer = require("immer");
 function safeClone(obj) {
@@ -188,10 +191,50 @@ function createStore(initialValue, options = {}) {
       }
     });
   }
-  return createProxy([]);
+  const proxyStore = createProxy([]);
+  if (Array.isArray(options.plugins)) {
+    for (const plugin of options.plugins) {
+      try {
+        plugin(proxyStore);
+      } catch (e) {
+        console.warn("[statekit-lite] Plugin error:", e);
+      }
+    }
+  }
+  return proxyStore;
+}
+
+// src/sse-plugin.ts
+function ssePlugin(options) {
+  const { url, path, mapper, mode = "set" } = options;
+  return (store) => {
+    const source = new EventSource(url);
+    source.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(event.data);
+        const data = mapper ? mapper(parsed) : parsed;
+        let target = store;
+        for (const key of path.slice(0, -1)) {
+          target = target[key];
+        }
+        const lastKey = path[path.length - 1];
+        if (mode === "push") {
+          target[lastKey].update((prev) => [...prev ?? [], data]);
+        } else {
+          target[lastKey].set(data);
+        }
+      } catch (err) {
+        console.warn("[ssePlugin] \u041E\u0448\u0438\u0431\u043A\u0430 \u0440\u0430\u0437\u0431\u043E\u0440\u0430 \u0434\u0430\u043D\u043D\u044B\u0445:", err);
+      }
+    };
+    source.onerror = (err) => {
+      console.warn("[ssePlugin] \u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F:", err);
+    };
+  };
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  createStore
+  createStore,
+  ssePlugin
 });
 //# sourceMappingURL=index.cjs.map

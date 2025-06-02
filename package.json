@@ -1,6 +1,6 @@
 {
     "name": "statekit-lite",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "author": "stalk94",
     "description": "Minimal proxy-based global state manager for React with nested access, persist, watch, and devtools.",
     "main": "src/index.ts",
@@ -36,6 +36,8 @@
         "@testing-library/react": "^16.3.0",
         "@types/react": "^19.1.5",
         "@vitejs/plugin-react": "^4.5.0",
+        "cors": "^2.8.5",
+        "express": "^5.1.0",
         "jsdom": "^26.1.0",
         "react-dom": "^18.1.0",
         "tsup": "^8.5.0",

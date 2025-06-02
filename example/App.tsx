@@ -1,5 +1,5 @@
 import React from 'react';
-import { createStore } from '../src/index';
+import { createStore, ssePlugin } from '../src/index';
 
 
 const userStore = createStore({
@@ -13,6 +13,18 @@ const userStore = createStore({
     immer: true
 });
 
+const testSse = createStore({
+    messages: []
+}, {
+    plugins: [
+        ssePlugin<string>({
+            url: 'http://localhost:3000/events',
+            path: ['messages'],
+            mode: 'push', // добавлять в массив
+            mapper: (data) => data.message ?? data
+        })
+    ]
+});
 
 
 export function Display() {
@@ -22,6 +34,16 @@ export function Display() {
         <pre style={{ marginLeft: '35%', marginTop: '5%', fontSize: '24px', color: '#c5f467' }}>
             { JSON.stringify(user, null, 2) }
         </pre>
+    );
+}
+// test Sse plugin
+export function MessagesList() {
+    const messages = testSse.messages.use();
+
+    return (
+        <ul>
+            { messages.map((m, i) => <li key={i}>{m}</li>) }
+        </ul>
     );
 }
 

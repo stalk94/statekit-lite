@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Updater, Display } from './App'
+import { Updater, Display, MessagesList } from './App'
 
 
 
@@ -63,6 +63,7 @@ export function App() {
             <TopBar />
             <Updater />
             <Display />
+            <MessagesList />
         </div>
     );
 }

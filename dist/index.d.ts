@@ -1,4 +1,5 @@
 type ValueOrUpdater<T> = T | ((prev: T) => T);
+type StorePlugin = (store: ProxyState<any>) => void;
 type ProxyState<T> = {
     /**
      *  🔗 `.get()` — object references
@@ -52,7 +53,23 @@ interface StoreOptions {
     };
     /** 🔧 default: false */
     immer?: boolean;
+    plugins?: StorePlugin[];
 }
 declare function createStore<T extends object>(initialValue: T, options?: StoreOptions): ProxyState<T>;
 
-export { type ProxyState, createStore };
+type SSEPluginOptions<T> = {
+    /** URL SSE-сервера */
+    url: string;
+    /** Путь в store: ['messages'] или ['chat', 'list'] */
+    path: (string | number)[];
+    /** Преобразование данных перед установкой */
+    mapper?: (data: any) => T;
+    /**
+     * Поведение: 'set' (по умолчанию) — перезапись значения,
+     * или 'push' — добавление в массив
+     */
+    mode?: 'set' | 'push';
+};
+declare function ssePlugin<T = any>(options: SSEPluginOptions<T>): (store: ProxyState<any>) => void;
+
+export { createStore, ssePlugin };
