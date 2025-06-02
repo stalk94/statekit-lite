@@ -34,7 +34,9 @@ pnpm add statekit-lite
 ```
 
 
-## 📌 examples
+## 📌 Examples
+
+ crate state
 ```tsx
 import React from "react";
 import { createStore } from "statekit-lite";
@@ -55,7 +57,7 @@ const userStore = createStore({
 ```
 
 
-
+full example of possible use
 ```tsx
 import React from "react";
 import { createStore } from "statekit-lite";
