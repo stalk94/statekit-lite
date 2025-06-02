@@ -39,7 +39,7 @@ const userStore = createStore({
 const testSse = createStore({} as {data: string, clients: number}, {
     plugins: [
         ssePlugin<string>({
-            url: 'http://localhost:3000/events'
+            url: '/events'
         })
     ]
 });
@@ -61,7 +61,7 @@ function Sender() {
 
     const send = async () => {
         if (!text.trim()) return;
-        await fetch('http://localhost:3000/send', {
+        await fetch('/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: text, id: id  }),
