@@ -19,7 +19,9 @@ const writeUserCount =()=> {
     }
 }
 
-
+app.get('/', (req, res)=> {
+    res.sendFile(__dirname+'/build/index.html');
+});
 app.get('/events', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
@@ -48,6 +50,6 @@ app.post('/send', (req, res) => {
 });
 
 
-app.listen(3000, () => {
-    console.log('🚀 SSE сервер запущен: http://localhost:3000/events');
+app.listen(process.env.PORT || 3000, () => {
+    console.log('🚀 SSE сервер запущен');
 });

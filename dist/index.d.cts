@@ -1,5 +1,6 @@
 type ValueOrUpdater<T> = T | ((prev: T) => T);
 type StorePlugin = (store: ProxyState<any>) => void;
+type Unsubscribe = () => void;
 type ProxyState<T> = {
     /**
      *  🔗 `.get()` — object references
@@ -32,7 +33,7 @@ type ProxyState<T> = {
      *  const unsub = state.user.name.watch((val) => console.log(val));
      *  unsub();
      */
-    watch: (fn: (newValue: T) => void) => () => void;
+    watch: (fn: (val: T, unsub: () => void) => void) => Unsubscribe;
     /**
      *  🗐 Returns a deep cloned plain value
      *  Functions and components are preserved by reference
@@ -70,6 +71,6 @@ type SSEPluginOptions<T> = {
      */
     mode?: 'set' | 'push';
 };
-declare function ssePlugin<T = any>(options: SSEPluginOptions<T>): (store: ProxyState<any>) => void;
+declare function ssePlugin<T = any>(options: SSEPluginOptions<T>): (store: ProxyState<any>) => Unsubscribe;
 
 export { createStore, ssePlugin };

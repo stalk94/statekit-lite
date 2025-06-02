@@ -169,8 +169,10 @@ function createStore(initialValue, options = {}) {
           watchers.set(pathStr, /* @__PURE__ */ new Set());
         }
         const set = watchers.get(pathStr);
-        set.add(fn);
-        return () => set.delete(fn);
+        const wrapped = (val) => fn(val, unsub);
+        set.add(wrapped);
+        const unsub = () => set.delete(wrapped);
+        return unsub;
       },
       /**
        *  🗐 Returns a deep copy of the current value  
@@ -192,15 +194,22 @@ function createStore(initialValue, options = {}) {
     });
   }
   const proxyStore = createProxy([]);
+  const cleanups = [];
   if (Array.isArray(options.plugins)) {
     for (const plugin of options.plugins) {
       try {
-        plugin(proxyStore);
+        const result = plugin(proxyStore);
+        if (typeof result === "function") {
+          cleanups.push(result);
+        }
       } catch (e) {
         console.warn("[statekit-lite] Plugin error:", e);
       }
     }
   }
+  proxyStore.dispose = () => {
+    cleanups.forEach((fn) => fn());
+  };
   return proxyStore;
 }
 
@@ -213,22 +222,24 @@ function ssePlugin(options) {
       try {
         const parsed = JSON.parse(event.data);
         const data = mapper ? mapper(parsed) : parsed;
-        if (!path || path.length === 0) {
-          if (mode === "push") {
-            throw new Error('[ssePlugin] mode: "push" \u043D\u0435\u0434\u043E\u043F\u0443\u0441\u0442\u0438\u043C \u0431\u0435\u0437 path');
-          }
-          store.set(data);
-          return;
-        }
         let target = store;
-        for (const key of path.slice(0, -1)) {
-          target = target[key];
-        }
-        const lastKey = path[path.length - 1];
-        if (mode === "push") {
-          target[lastKey].update((prev) => [...prev ?? [], data]);
+        if (path) {
+          for (const key of path.slice(0, -1)) {
+            if (!(key in target)) return;
+            target = target[key];
+          }
+          const lastKey = path[path.length - 1];
+          if (mode === "push") {
+            const current = target[lastKey].get?.();
+            if (!Array.isArray(current)) {
+              target[lastKey].set([]);
+            }
+            target[lastKey].update((prev) => [...prev ?? [], data]);
+          } else {
+            target[lastKey].set(data);
+          }
         } else {
-          target[lastKey].set(data);
+          store.set(data);
         }
       } catch (err) {
         console.warn("[ssePlugin] \u041E\u0448\u0438\u0431\u043A\u0430 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438:", err);
@@ -237,6 +248,11 @@ function ssePlugin(options) {
     source.onerror = (err) => {
       console.warn("[ssePlugin] \u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F:", err);
     };
+    const cleanup = () => {
+      source.close();
+      console.log("[ssePlugin] \u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u043E");
+    };
+    return cleanup;
   };
 }
 // Annotate the CommonJS export names for ESM import in node:
