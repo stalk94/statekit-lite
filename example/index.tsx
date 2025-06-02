@@ -3,31 +3,44 @@ import { createRoot } from 'react-dom/client';
 import { Updater, Display, MessagesList } from './App'
 
 
-
-function TopBar() {
-    const [enabled, setEnabled] = React.useState(false);
-
-    const toggle = () => {
-        const next = !enabled;
-        setEnabled(next);
-        onTogglePersist(next);
-    }
+type TopBarProps = {
+    setRenderMod: (mod: 'base'|'sse')=> void
+    mod: 'base'|'sse'
+}
+function TopBar({ setRenderMod, mod }: TopBarProps) {
     const render =()=> {
         return(
-            <button
-                onClick={toggle}
-                style={{
-                    background: enabled ? '#c5f467' : '#444',
-                    color: enabled ? '#000' : '#c5f467',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '5px 10px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                }}
-            >
-                Persist: {enabled ? 'ON' : 'OFF'}
-            </button>
+            <div style={{display:'flex'}}>
+                <button
+                    onClick={()=> setRenderMod('base')}
+                    style={{
+                        background: mod === 'base' ? '#c5f467' : '#444',
+                        color: mod === 'base' ? '#000' : '#c5f467',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        marginRight: 5,
+                    }}
+                >
+                    base
+                </button>
+                <button
+                    onClick={()=> setRenderMod('sse')}
+                    style={{
+                        background: mod === 'sse' ? '#c5f467' : '#444',
+                        color: mod === 'sse' ? '#000' : '#edede4',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                    }}
+                >
+                    sse-plugin
+                </button>
+            </div>
         );
     }
 
@@ -48,6 +61,9 @@ function TopBar() {
             boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
         }}>
             <span>⚙️ StateKit Demo</span>
+            <div style={{right: 0}}>
+                { render() }
+            </div>
         </div>
     );
 }
@@ -55,15 +71,22 @@ function TopBar() {
 
 // Root component
 export function App() {
-    const [_, forceUpdate] = React.useReducer(v => v + 1, 0);
+    const [mod, setMod] = React.useState<'base'|'sse'>('base');
+
+    const useRender =()=> {
+        if(mod === 'base') return <Display />
+        else if(mod === 'sse') return <MessagesList />
+    }
 
 
     return (
         <div>
-            <TopBar />
+            <TopBar
+                mod={mod}
+                setRenderMod={setMod}
+            />
             <Updater />
-            <Display />
-            <MessagesList />
+            { useRender() }
         </div>
     );
 }

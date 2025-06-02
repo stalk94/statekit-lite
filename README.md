@@ -188,15 +188,15 @@ Below is a minimal SSE backend you can use to push real-time updates into statek
   });
 
   // Send an event to all clients
-  app.post('/send', (req, res) => {
-    const { message } = req.body ?? { message: 'Default message' };
-    const payload = JSON.stringify({ message });
+    app.post('/send', (req, res) => {
+      const msg = req.body?.message ?? 'Пустое сообщение';
+      const payload = JSON.stringify({ data: msg });
+      
+      for (const client of clients) {
+          client.write(`data: ${payload}\n\n`);
+      }
 
-    for (const client of clients) {
-      client.write(`data: ${payload}\n\n`);
-    }
-
-    res.sendStatus(200);
+      res.sendStatus(200);
   });
 
   app.listen(3000, () => {

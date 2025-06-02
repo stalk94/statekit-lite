@@ -3,6 +3,7 @@ import { produce } from "immer";
 
 type ValueOrUpdater<T> = T | ((prev: T) => T);
 type StorePlugin = (store: ProxyState<any>) => void;
+export type Unsubscribe = () => void;
 
 export type ProxyState<T> = {
     /** 
@@ -40,7 +41,7 @@ export type ProxyState<T> = {
      *  const unsub = state.user.name.watch((val) => console.log(val));
      *  unsub();
      */
-    watch: (fn: (newValue: T) => void) => () => void;
+    watch: (fn: (val: T, unsub: () => void) => void) => Unsubscribe;
 
     /**
      *  🗐 Returns a deep cloned plain value  
@@ -226,13 +227,18 @@ export function createStore<T extends object>(
              *  @param callback Function to call when value changes  
              *  @returns Unsubscribe function
              */
-            watch: (fn: (val: any) => void) => {
+            watch: (fn: (val: any, unsub: Unsubscribe) => void) => {
                 if (!watchers.has(pathStr)) {
                     watchers.set(pathStr, new Set());
                 }
+
                 const set = watchers.get(pathStr)!;
-                set.add(fn);
-                return () => set.delete(fn);
+
+                const wrapped = (val: any) => fn(val, unsub);
+                set.add(wrapped);
+
+                const unsub = () => set.delete(wrapped);
+                return unsub;
             },
             /**
              *  🗐 Returns a deep copy of the current value  
@@ -256,17 +262,25 @@ export function createStore<T extends object>(
     }
 
     const proxyStore = createProxy([]) as ProxyState<T>;
+    const cleanups: (() => void)[] = [];
 
     if (Array.isArray(options.plugins)) {
         for (const plugin of options.plugins) {
             try {
-                plugin(proxyStore);
+                const result = plugin(proxyStore);
+                if (typeof result === 'function') {
+                    cleanups.push(result);
+                }
             } 
             catch (e) {
                 console.warn('[statekit-lite] Plugin error:', e);
             }
         }
     }
+
+    (proxyStore as any).dispose = () => {
+        cleanups.forEach(fn => fn());
+    };
 
     return proxyStore;
 }

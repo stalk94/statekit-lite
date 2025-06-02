@@ -1,4 +1,4 @@
-import { ProxyState } from './store';
+import { ProxyState, Unsubscribe } from './store';
 
 type SSEPluginOptions<T> = {
     /**🌐 URL path endpoint SSE */
@@ -18,38 +18,36 @@ type SSEPluginOptions<T> = {
 export default function ssePlugin<T = any>(options: SSEPluginOptions<T>) {
     const { url, path, mapper, mode = 'set' } = options;
 
-    return (store: ProxyState<any>) => {
+    return (store: ProxyState<any>): Unsubscribe => {
         const source = new EventSource(url);
 
         source.onmessage = (event) => {
             try {
                 const parsed = JSON.parse(event.data);
                 const data = mapper ? mapper(parsed) : parsed;
-
-                if (!path || path.length === 0) {
-                    // если path не задан → пишем в корень
-                    if (mode === 'push') {
-                        throw new Error('[ssePlugin] mode: "push" недопустим без path');
-                    }
-                    store.set(data);
-                    return;
-                }
-
-                // иначе идём по пути
                 let target: any = store;
-                for (const key of path.slice(0, -1)) {
-                    target = target[key];
-                }
 
-                const lastKey = path[path.length - 1];
+                if (path) {
+                    for (const key of path.slice(0, -1)) {
+                        if (!(key in target)) return;
+                        target = target[key];
+                    }
+                    const lastKey = path[path.length - 1];
 
-                if (mode === 'push') {
-                    target[lastKey].update((prev: T[]) => [...(prev ?? []), data]);
+                    if (mode === 'push') {
+                        const current = target[lastKey].get?.();
+                        if (!Array.isArray(current)) {
+                            target[lastKey].set([]);
+                        }
+                        target[lastKey].update((prev: T[]) => [...(prev ?? []), data]);
+                    } 
+                    else {
+                        target[lastKey].set(data);
+                    }
                 } 
                 else {
-                    target[lastKey].set(data);
+                    store.set(data);
                 }
-
             } 
             catch (err) {
                 console.warn('[ssePlugin] Ошибка обработки:', err);
@@ -59,5 +57,12 @@ export default function ssePlugin<T = any>(options: SSEPluginOptions<T>) {
         source.onerror = (err) => {
             console.warn('[ssePlugin] Ошибка соединения:', err);
         }
-    };
+
+        const cleanup: Unsubscribe = () => {
+            source.close();
+            console.log('[ssePlugin] Соединение закрыто');
+        }
+
+        return cleanup;
+    }
 }

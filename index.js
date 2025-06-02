@@ -11,6 +11,13 @@ app.use(express.json());
 
 
 let clients = [];
+const writeUserCount =()=> {
+    const clientsLengths = JSON.stringify({ clients: clients.length });
+
+    for (const client of clients) {
+        client.write(`data: ${clientsLengths}\n\n`);
+    }
+}
 
 
 app.get('/events', (req, res) => {
@@ -19,18 +26,20 @@ app.get('/events', (req, res) => {
     res.setHeader('Connection', 'keep-alive');
 
     clients.push(res);
-    console.log('💡 Новый клиент подключён');
+    writeUserCount();
 
     req.on('close', () => {
         clients = clients.filter((c) => c !== res);
+        writeUserCount();
+
         res.end();
     });
 });
 
 app.post('/send', (req, res) => {
     const msg = req.body?.message ?? 'Пустое сообщение';
-    const payload = JSON.stringify({ message: msg });
-
+    const payload = JSON.stringify({ id: req.body.id , data: msg, clients: clients.length });
+    
     for (const client of clients) {
         client.write(`data: ${payload}\n\n`);
     }
