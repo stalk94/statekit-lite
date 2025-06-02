@@ -6,6 +6,7 @@ A minimal global state manager for React
 - ⚛️ Fully typed reactive access 
 - 🔁 `.get()`, `.set()`, `.use()` and `.watch()` on any nested path  
 - 📦 Redux DevTools compatible 
+- 🌐 Realtime support with SSE plugin
 
 
 ## ✨ Key Features
@@ -16,7 +17,7 @@ A minimal global state manager for React
 - 💾 **Persist to localStorage**
 - ⚛️ **Redux DevTools integration**
 - ✨ **SSR-safe by design**
-
+- 🌐 **Realtime updates via ssePlugin()**
 
 
 ## 📦 Installation
@@ -115,16 +116,101 @@ userStore.user.watch((user) => {
 });
 ```
 
+## 🧩 Plugins Support (SSE Example)
+
+Enable realtime updates from a server:
+```ts
+  import { createStore, ssePlugin } from 'statekit-lite';
+
+  const store = createStore({
+    messages: [] as string[],
+  }, {
+    plugins: [
+      ssePlugin<string>({
+        url: 'http://localhost:3000/events',
+        path: ['messages'],
+        mode: 'push',
+        mapper: (data) => data.message
+      })
+    ]
+  });
+
+  // example component real time update SSE
+  function Messages() {
+    const list = store.messages.use();
+    return <ul>{list.map((msg, i) => <li key={i}>{msg}</li>)}</ul>;
+  }
+```
+### 🧠 Plugin: ssePlugin(options)
+- `url`: Server-Sent Events endpoint
+- `path`: Where in the store to apply incoming data
+- `mode`: 'set' (default) replaces the value, 'push' adds to array
+- `mapper`: Optional function to transform data before applying
+
+```ts
+  type SSEPluginOptions<T> = {
+    url: string;                      // 🔌 URL SSE endpoint
+    path?: (string | number)[];       // 🔑 (optional) Path inside store to update
+    mapper?: (data: any) => T;        // 🧠 (optional) transform before storing
+    mode?: 'set' | 'push';            // 🔁 (optional) 'set' (default) or 'push' to array (push mode is ideal for appending to arrays, set to override the target value)
+  }
+
+```
+
+### 🔌 Realtime Server Example (Node.js + Express)
+Below is a minimal SSE backend you can use to push real-time updates into statekit-lite.
+
+```ts
+  // server.ts
+  import express from 'express';
+  import cors from 'cors';
+
+  const app = express();
+  app.use(cors());
+  app.use(express.json());
+
+  let clients: Response[] = [];
+
+  // SSE endpoint: clients connect here
+  app.get('/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    clients.push(res);
+    console.log('👤 Client connected');
+
+    req.on('close', () => {
+      clients = clients.filter(c => c !== res);
+      res.end();
+      console.log('❌ Client disconnected');
+    });
+  });
+
+  // Send an event to all clients
+  app.post('/send', (req, res) => {
+    const { message } = req.body ?? { message: 'Default message' };
+    const payload = JSON.stringify({ message });
+
+    for (const client of clients) {
+      client.write(`data: ${payload}\n\n`);
+    }
+
+    res.sendStatus(200);
+  });
+
+  app.listen(3000, () => {
+    console.log('🚀 SSE server running at http://localhost:3000/events');
+  });
+```
 
 ---
 
 ## 🧩 When to Use
 
 - Global state in React SPA
-- Forms, visual editors, configuration schemas
-- Embedded apps and libraries
-- Forms and config panels
-- Minimal, fast global state
-
-
-→ And view updates in [Redux DevTools Extension](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd)
+- Forms, visual editors, configuration panels
+- Embedded apps and UI libraries
+- Minimal, fast alternative to Redux/Zustand
+- Real-time dashboards, chats, logs (via SSE plugin)
+- Server-driven UIs or status syncing

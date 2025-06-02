@@ -14,14 +14,11 @@ const userStore = createStore({
 });
 
 const testSse = createStore({
-    messages: []
+    
 }, {
     plugins: [
         ssePlugin<string>({
-            url: 'http://localhost:3000/events',
-            path: ['messages'],
-            mode: 'push', // добавлять в массив
-            mapper: (data) => data.message ?? data
+            url: 'http://localhost:3000/events'
         })
     ]
 });
@@ -38,11 +35,12 @@ export function Display() {
 }
 // test Sse plugin
 export function MessagesList() {
-    const messages = testSse.messages.use();
+    const messages = testSse.use();
+    console.log(messages)
 
     return (
         <ul>
-            { messages.map((m, i) => <li key={i}>{m}</li>) }
+            {  }
         </ul>
     );
 }

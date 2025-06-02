@@ -187,6 +187,13 @@ function ssePlugin(options) {
       try {
         const parsed = JSON.parse(event.data);
         const data = mapper ? mapper(parsed) : parsed;
+        if (!path || path.length === 0) {
+          if (mode === "push") {
+            throw new Error('[ssePlugin] mode: "push" \u043D\u0435\u0434\u043E\u043F\u0443\u0441\u0442\u0438\u043C \u0431\u0435\u0437 path');
+          }
+          store.set(data);
+          return;
+        }
         let target = store;
         for (const key of path.slice(0, -1)) {
           target = target[key];
@@ -198,7 +205,7 @@ function ssePlugin(options) {
           target[lastKey].set(data);
         }
       } catch (err) {
-        console.warn("[ssePlugin] \u041E\u0448\u0438\u0431\u043A\u0430 \u0440\u0430\u0437\u0431\u043E\u0440\u0430 \u0434\u0430\u043D\u043D\u044B\u0445:", err);
+        console.warn("[ssePlugin] \u041E\u0448\u0438\u0431\u043A\u0430 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438:", err);
       }
     };
     source.onerror = (err) => {

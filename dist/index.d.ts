@@ -58,10 +58,10 @@ interface StoreOptions {
 declare function createStore<T extends object>(initialValue: T, options?: StoreOptions): ProxyState<T>;
 
 type SSEPluginOptions<T> = {
-    /** URL SSE-сервера */
+    /**🌐 URL path endpoint SSE */
     url: string;
     /** Путь в store: ['messages'] или ['chat', 'list'] */
-    path: (string | number)[];
+    path?: (string | number)[];
     /** Преобразование данных перед установкой */
     mapper?: (data: any) => T;
     /**
