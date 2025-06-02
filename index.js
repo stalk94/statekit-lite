@@ -4,10 +4,18 @@
 
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'build')));
 
 
 let clients = [];
@@ -19,9 +27,8 @@ const writeUserCount =()=> {
     }
 }
 
-app.get('/', (req, res)=> {
-    res.sendFile(__dirname+'/build/index.html');
-});
+
+
 app.get('/events', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
@@ -37,6 +44,9 @@ app.get('/events', (req, res) => {
         res.end();
     });
 });
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 
 app.post('/send', (req, res) => {
     const msg = req.body?.message ?? 'Пустое сообщение';
@@ -50,6 +60,6 @@ app.post('/send', (req, res) => {
 });
 
 
-app.listen(process.env.PORT || 3000, () => {
+app.listen(process.env?.PORT || 3000, () => {
     console.log('🚀 SSE сервер запущен');
 });
