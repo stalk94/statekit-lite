@@ -34,7 +34,27 @@ pnpm add statekit-lite
 ```
 
 
-## 🚀 Features
+## 📌 examples
+```tsx
+import React from "react";
+import { createStore } from "statekit-lite";
+
+// Create store with persist + devtools
+const userStore = createStore({
+  user: {
+    name: 'Anon',
+    age: 25
+  }
+}, {
+  persist: {
+    key: 'user'     //  (path key from local storage) persist save, and auto load 
+  },
+  immer: true 
+});
+
+```
+
+
 
 ```tsx
 import React from "react";
