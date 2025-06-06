@@ -1,5 +1,5 @@
 import React from 'react';
-import { createStore, ssePlugin, syncPlugin } from '../src/index';
+import { createStore, ssePlugin, syncPlugin } from '../dist/index';
 
 
 ////////////////////////////////////////////////////////////////////////

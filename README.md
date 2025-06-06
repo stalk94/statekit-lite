@@ -280,6 +280,12 @@ Ideal for:
 - Shared persistent state across clients
 - Saving editor/project/user states per session or user ID
 
+
+To use `supabasePlugin`, install Supabase client:
+```bash
+  npm install @supabase/supabase-js
+```
+
 #### ✅ Features
 - Bidirectional sync with Supabase (`jsonb`)
 - Works with any key and field (custom primary key supported)

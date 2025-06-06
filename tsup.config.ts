@@ -12,5 +12,6 @@ export default defineConfig({
 	//minify: true,
     outDir: 'dist',
     target: 'es2020',
-	//noExternal: ['immer']
+	noExternal: ['immer'],
+    external: ['@supabase/supabase-js', 'react', 'react-dom']
 });

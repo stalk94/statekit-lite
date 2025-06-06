@@ -1,6 +1,6 @@
 {
     "name": "statekit-lite",
-    "version": "1.2.5",
+    "version": "1.3.0",
     "author": "stalk94",
     "homepage": "https://statekit-lite-production.up.railway.app/",
     "repository": {
@@ -11,12 +11,19 @@
     "module": "dist/index.js",
     "types": "dist/index.d.ts",
     "type": "module",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "sideEffects": false,
     "license": "MIT",
     "files": [
         "dist"
     ],
     "scripts": {
-        "build": "tsup src/index.ts --format esm,cjs --dts",
+        "build": "tsup src/index.ts --format esm --dts --no-sourcemap",
         "start": "node index.js",
         "dev": "vite",
         "build:demo": "vite build",
@@ -55,18 +62,18 @@
         "cors": "^2.8.5",
         "express": "^5.1.0",
         "jsdom": "^26.1.0",
-        "react-dom": "^18.1.0",
         "tsup": "^8.5.0",
         "typescript": "^5.8.3",
         "vite": "^6.3.5",
-        "vitest": "^3.1.4"
+        "vitest": "^3.1.4",
+        "@types/express": "^5.0.2"
     },
     "peerDependencies": {
-        "react": "^18.1.0"
+        "react": "^18.1.0",
+        "react-dom": "^18.1.0"
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.50.0",
-        "@types/express": "^5.0.2",
         "immer": "^10.1.1"
     }
 }
