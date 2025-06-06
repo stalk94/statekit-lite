@@ -5,8 +5,8 @@ import { createStore, supabasePlugin } from '../src/index';
 const store = createStore({count: 1, update: Date.now()}, {
     plugins: [
         supabasePlugin({
-            url: 'https://bhgrcocadwsejwodvzql.supabase.co',
-            anon_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoZ3Jjb2NhZHdzZWp3b2R2enFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg2MzY5NTksImV4cCI6MjA2NDIxMjk1OX0.ijFGDKECfWYBULzTDUtIJMFaAJN1N-70ygQSzMONQIg',
+            url: 'https://your-project.supabase.co',
+            anon_key: 'your-anon-key',
             table: 'kv_store',
             key: 'user-5421748935',
             debug: true,
