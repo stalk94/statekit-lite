@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Updater, Display, MessagesList, MessagesListWs } from './App'
+import Spb from './Supabase';
 
 
 type TopBarProps = {
@@ -10,7 +11,8 @@ type TopBarProps = {
 function TopBar({ setRenderMod, mod }: TopBarProps) {
     const data = [
         {title: 'base', value: 'base'},
-        {title: 'syncPlugin', value: 'ws'},
+        {title: 'supabase-plugin', value: 'spb'},
+        {title: 'sync-plugin', value: 'ws'},
         {title: 'sse-plugin', value: 'sse'}
     ];
 
@@ -66,12 +68,13 @@ function TopBar({ setRenderMod, mod }: TopBarProps) {
 
 // Root component
 export function App() {
-    const [mod, setMod] = React.useState<'base'|'ws'|'sse'>('ws');
+    const [mod, setMod] = React.useState<'base'|'ws'|'sse'>('base');
 
     const useRender =()=> {
         if(mod === 'base') return <Display />
         else if(mod === 'sse') return <MessagesList />
         else if(mod === 'ws') return <MessagesListWs />
+        else if(mod === 'spb') return <Spb />
     }
 
 

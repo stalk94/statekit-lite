@@ -11,13 +11,19 @@ A minimal global state manager for React
 
 ## ✨ Key Features
 
-- 🔥 **Proxy-based access with automatic nested structure creation**
-- 🔥 **Typed access and reactivity with `.get()` / `.set()` / `.use()`**
-- 📝 **Watch outside React with `.watch(fn)`**
-- 💾 **Persist to localStorage**
-- ⚛️ **Redux DevTools integration**
-- ✨ **SSR-safe by design**
-- 🌐 **Realtime updates via ssePlugin()**
+- 🔥 Proxy-based access with automatic nested structure creation
+- 🔥 Typed access and reactivity with `.get()` / `.set()` / `.use()`
+- 📝 Watch outside React with `.watch(fn)`
+- 💾 Persist to localStorage
+- ⚛️ Redux DevTools integration
+- ✨ SSR-safe by design
+- 🌐 Realtime updates via ssePlugin()
+- 🧩 Plugin system — extend behavior with middleware-style plugins
+- 🌐 Realtime sync via:
+
+  - `ssePlugin()` – Server-Sent Events  
+  - `syncPlugin()` – universal sync layer (WebSocket, polling, etc.)  
+  - `supabasePlugin()` – Supabase integration (with optional fallback polling)
 
 
 ## 📦 Installation
@@ -263,6 +269,70 @@ Below is a minimal SSE backend you can use to push real-time updates into statek
     console.log('🚀 SSE server running at http://localhost:3000/events');
   });
 ```
+
+## 🗄️ supabase Plugin
+
+A plugin that synchronizes your entire store with a Supabase table in key-value format.
+
+Ideal for:
+
+- Realtime collaboration
+- Shared persistent state across clients
+- Saving editor/project/user states per session or user ID
+
+#### ✅ Features
+- Bidirectional sync with Supabase (`jsonb`)
+- Works with any key and field (custom primary key supported)
+- Realtime updates using `postgres_changes`
+- Auto-insert on first load
+- Full store hydration and push on change
+
+#### 🧩 Table structure
+
+```sql
+create table kv_store (
+  key text primary key,
+  value jsonb,
+  updated_at timestamp default now()
+);
+```
+#### ⚠️ Enable Realtime in Supabase
+
+To receive realtime updates from Supabase, you must **explicitly enable Realtime** for your table.
+
+1. Go to your project in [Supabase Dashboard](https://app.supabase.com)
+2. Navigate to **Table Editor → kv_store**
+3. Click on the **Realtime** tab
+4. Toggle the switch to **Enable Realtime**
+
+Otherwise, `.on('postgres_changes', ...)` will not trigger any events.
+
+#### 🔧 Usage
+```ts
+  import { createStore, supabasePlugin } from 'statekit-lite';
+
+  const store = createStore({ count: 0 }, {
+    plugins: [
+      supabaseKVPlugin({
+        url: 'https://your-project.supabase.co',
+        anon_key: 'your-anon-key',
+        table: 'kv_store',
+        key: 'session-123',        // identifier of this row
+        field: 'value',            // optional (default = 'value')
+        primary_key: 'key',        // optional (default = 'key')
+        debug: true,
+        polling: 3000,             // ← (optional) fallback polling every 3s if Realtime is not working
+      })
+    ]
+  });
+
+```
+This plugin automatically:
+- Loads the initial state from Supabase
+- Subscribes to realtime changes for the same key
+- Pushes new state on every .set() or .update()
+
+✅ Supports multi-user setups (just change the key value per user/project)
 
 ---
 

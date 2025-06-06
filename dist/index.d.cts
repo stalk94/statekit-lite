@@ -123,4 +123,44 @@ interface SyncPluginOptions<T = any> {
  */
 declare function syncPlugin<T>(options: SyncPluginOptions<T>): StorePlugin;
 
-export { createStore, ssePlugin, syncPlugin };
+type SupabaseGlobalPluginOptions = {
+    /**
+     * Supabase project URL (e.g., https://your-project.supabase.co)
+     */
+    url: string;
+    /**
+     * Supabase public anon key for client-side access
+     */
+    anon_key: string;
+    /**
+     * The table name where the data will be synced
+     * (e.g., 'kv_store')
+     */
+    table: string;
+    /**
+     * The name of the primary key column used to identify rows
+     * Default is 'key'
+     */
+    primary_key?: string;
+    /**
+     * The value of the primary key to target
+     * This uniquely identifies the row for this store instance
+     */
+    key: string;
+    /**
+     * in milliseconds (0 = disabled by default)
+     */
+    polling?: number;
+    /**
+     * The column name where the store state will be stored
+     * Default is 'value'
+     */
+    field?: string;
+    /**
+     * Enables debug logging to console
+     */
+    debug?: boolean;
+};
+declare function supabaseGlobalPlugin(options: SupabaseGlobalPluginOptions): StorePlugin;
+
+export { createStore, ssePlugin, supabaseGlobalPlugin as supabasePlugin, syncPlugin };

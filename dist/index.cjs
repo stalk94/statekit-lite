@@ -21,6 +21,7 @@ var index_exports = {};
 __export(index_exports, {
   createStore: () => createStore,
   ssePlugin: () => ssePlugin,
+  supabasePlugin: () => supabaseGlobalPlugin,
   syncPlugin: () => syncPlugin
 });
 module.exports = __toCommonJS(index_exports);
@@ -239,10 +240,96 @@ function ssePlugin(options) {
     }
   });
 }
+
+// src/plugins/supabase-plugin.ts
+var import_supabase_js = require("@supabase/supabase-js");
+function supabaseGlobalPlugin(options) {
+  const supabase = (0, import_supabase_js.createClient)(options.url, options.anon_key);
+  const { table, primary_key = "key", key, polling = 0, field = "value", debug } = options;
+  const log = (...args) => debug && console.log("[supabaseKVPlugin]", ...args);
+  return (store) => {
+    let ignoreNext = false;
+    let lastSent = "";
+    let gotEvent = false;
+    let pollTimer;
+    let hasLocalUpdates = false;
+    function startPolling() {
+      if (!polling || polling <= 0) return;
+      log("\u{1F504} Realtime silent \u2014 fallback polling every", polling, "ms");
+      pollTimer = setInterval(async () => {
+        const { data, error } = await supabase.from(table).select(field).eq(primary_key, key).single();
+        if (data?.[field]) {
+          const snap = JSON.stringify(data[field]);
+          if (snap !== lastSent) {
+            log("\u{1F4E5} polled update:", data[field]);
+            ignoreNext = true;
+            store.set(() => data[field]);
+            lastSent = snap;
+          }
+        }
+      }, polling);
+    }
+    const channel = supabase.channel(`realtime:${table}`).on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table
+    }, (payload) => {
+      const rowKey = payload.new?.[primary_key];
+      const incoming = payload.new?.[field];
+      if (rowKey !== key || incoming === void 0) return;
+      gotEvent = true;
+      log("\u2B07\uFE0F incoming from Supabase:", incoming);
+      ignoreNext = true;
+      store.set(() => incoming);
+    }).subscribe();
+    const pushUpdate = async (data) => {
+      await supabase.from(table).upsert({
+        [primary_key]: key,
+        [field]: data
+      });
+    };
+    const unsub = store.watch(() => {
+      const val = store.get?.(true);
+      if (val === void 0) return;
+      hasLocalUpdates = true;
+      const snap = JSON.stringify(val);
+      if (snap === lastSent) return;
+      lastSent = snap;
+      log("\u2B06\uFE0F pushUpdate to Supabase:", val);
+      pushUpdate(val);
+    });
+    (async () => {
+      const { data, error } = await supabase.from(table).select(field).eq(primary_key, key).single();
+      if (data?.[field]) {
+        log("\u{1F4E5} initial load:", data[field]);
+        ignoreNext = true;
+        store.set(() => data[field]);
+      } else if (!error) {
+        log("\u{1F4E6} inserting default store state");
+        await pushUpdate(store.get(true));
+      }
+    })();
+    const timeout = setTimeout(() => {
+      if (hasLocalUpdates && !gotEvent) {
+        console.warn(
+          "[supabasePlugin] \u26A0\uFE0F No realtime events received from Supabase after local updates.\nMake sure Realtime is enabled for this table in Supabase Dashboard \u2192 Table Editor \u2192 Realtime tab."
+        );
+        startPolling();
+      }
+    }, 5e3);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(pollTimer);
+      supabase.removeChannel(channel);
+      unsub?.();
+    };
+  };
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   createStore,
   ssePlugin,
+  supabasePlugin,
   syncPlugin
 });
 //# sourceMappingURL=index.cjs.map
