@@ -6,8 +6,13 @@ import secret from './_core';
 const store = createStore({count: 1, update: Date.now()}, {
     plugins: [
         supabasePlugin({
+<<<<<<< HEAD
             url: secret.url,
             anon_key: secret.anon_key,
+=======
+            url: 'https://your-project.supabase.co',
+            anon_key: 'your-anon-key',
+>>>>>>> fdf0a521a7799d4721aef0ef7dbe75ed31432f80
             table: 'kv_store',
             key: 'user-5421748935',
             debug: true,
