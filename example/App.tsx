@@ -6,6 +6,7 @@ import { createStore, ssePlugin, syncPlugin } from '../src/index';
 const id = Date.now();
 let ws: WebSocket | null = null;
 let isReady = false;
+const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
 let originalTitle = document.title;
 let flashInterval: number | undefined;
 
@@ -51,7 +52,7 @@ const testWs = createStore({ message: ''} as {message: string, clients?: number,
     plugins: [
         syncPlugin({
             subscribe: (emit) => {
-                ws = new WebSocket(`ws://${import.meta.env.DEV ? 'localhost:3000' : location.host}/ws?id=${id}`);
+                ws = new WebSocket(`${protocol}://${import.meta.env.DEV ? 'localhost:3000' : location.host}/ws?id=${id}`);
                 ws.onopen = () => (isReady = true);
 
                 ws.onmessage = (e) => {
