@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Updater, Display, MessagesList } from './App'
+import { Updater, Display, MessagesList, MessagesListWs } from './App'
 
 
 type TopBarProps = {
@@ -8,38 +8,33 @@ type TopBarProps = {
     mod: 'base'|'sse'
 }
 function TopBar({ setRenderMod, mod }: TopBarProps) {
+    const data = [
+        {title: 'base', value: 'base'},
+        {title: 'syncPlugin', value: 'ws'},
+        {title: 'sse-plugin', value: 'sse'}
+    ];
+
     const render =()=> {
         return(
             <div style={{display:'flex'}}>
-                <button
-                    onClick={()=> setRenderMod('base')}
-                    style={{
-                        background: mod === 'base' ? '#c5f467' : '#444',
-                        color: mod === 'base' ? '#000' : '#c5f467',
-                        border: 'none',
-                        borderRadius: '4px',
-                        padding: '5px 10px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        marginRight: 5,
-                    }}
-                >
-                    base
-                </button>
-                <button
-                    onClick={()=> setRenderMod('sse')}
-                    style={{
-                        background: mod === 'sse' ? '#c5f467' : '#444',
-                        color: mod === 'sse' ? '#000' : '#edede4',
-                        border: 'none',
-                        borderRadius: '4px',
-                        padding: '5px 10px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                    }}
-                >
-                    sse-plugin
-                </button>
+                {data.map((elem, index)=> 
+                    <button
+                        key={index}
+                        onClick={() => setRenderMod(elem.value)}
+                        style={{
+                            background: mod === elem.value ? '#c5f467' : '#444',
+                            color: mod === elem.value ? '#000' : '#edede4',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '5px 10px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            marginRight: 8,
+                        }}
+                    >
+                        { elem.title }
+                    </button>
+                )}
             </div>
         );
     }
@@ -71,11 +66,12 @@ function TopBar({ setRenderMod, mod }: TopBarProps) {
 
 // Root component
 export function App() {
-    const [mod, setMod] = React.useState<'base'|'sse'>('base');
+    const [mod, setMod] = React.useState<'base'|'ws'|'sse'>('ws');
 
     const useRender =()=> {
         if(mod === 'base') return <Display />
         else if(mod === 'sse') return <MessagesList />
+        else if(mod === 'ws') return <MessagesListWs />
     }
 
 

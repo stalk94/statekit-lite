@@ -20,7 +20,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var index_exports = {};
 __export(index_exports, {
   createStore: () => createStore,
-  ssePlugin: () => ssePlugin
+  ssePlugin: () => ssePlugin,
+  syncPlugin: () => syncPlugin
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -104,19 +105,10 @@ function createStore(initialValue, options = {}) {
   function createProxy(path) {
     const pathStr = pathToString(path);
     const api = {
-      /** 
-       *  🔗 `.get()` - object references,     
-       *  🗐  `.get(true)`- structured clone 
-       */
       get: (clone = false) => {
         const val = getByPath(store.get(), path);
         return clone ? structuredClone(val) : val;
       },
-      /**
-       *  📌 `.set(value)` — direct replace   
-       *  🔁 `.set(prev => next)` — functional update  
-       *  🧠 `.set(draft => { draft.x = 1 })` — safe mutation via Immer   
-       */
       set: (val) => {
         const prev = getByPath(store.get(), path);
         const next = typeof val === "function" ? options.immer ? (0, import_immer.produce)(prev, val) : val(prev) : val;
@@ -128,42 +120,10 @@ function createStore(initialValue, options = {}) {
         const next = fn(current);
         store.set(setByPath(store.get(), path, next));
       },
-      /**
-       *  ⚛️ React hook that subscribes to this value. Automatically triggers re-render when value changes  
-       *
-       *  📌 Must be called inside a React component or hook  
-       *  Equivalent to `.get()` but reactive  
-       *
-       *  @returns Current value of the state at this path
-       */
       use: () => (0, import_react.useSyncExternalStore)(
         store.subscribe,
         () => getByPath(store.get(), path)
       ),
-      /**
-       *  👁 Subscribes to external (non-React) changes  
-       *  Useful for triggering side effects when a value changes  
-       *
-       *  Unlike `.use()`, works outside of React lifecycle  
-       *  You must manually unsubscribe to avoid memory leaks
-       * 
-       * @example
-       *  const unsubscribe = state.user.name.watch((val) => {
-       *      console.log("Changed:", val);
-       *  });
-       * // later
-       *  unsubscribe();
-       * 
-       * // or ract useEffect
-       * useEffect(() => {
-       *      const unsub = state.user.name.watch(console.log);
-       *      return unsub; // cleanup on unmount
-       *   }, []);
-       * 
-       * 
-       *  @param callback Function to call when value changes  
-       *  @returns Unsubscribe function
-       */
       watch: (fn) => {
         if (!watchers.has(pathStr)) {
           watchers.set(pathStr, /* @__PURE__ */ new Set());
@@ -174,15 +134,6 @@ function createStore(initialValue, options = {}) {
         const unsub = () => set.delete(wrapped);
         return unsub;
       },
-      /**
-       *  🗐 Returns a deep copy of the current value  
-       *  Safe to mutate or serialize (e.g. for export, snapshot, send to server)  
-       *
-       *  Functions and components are preserved by reference  
-       *  Proxy and reactivity are stripped
-       *
-       *  @returns Deep cloned plain value
-       */
       export: () => safeClone(getByPath(store.get(), path)),
       toJSON: () => getByPath(store.get(), path)
     };
@@ -203,7 +154,7 @@ function createStore(initialValue, options = {}) {
           cleanups.push(result);
         }
       } catch (e) {
-        console.warn("[statekit-lite] Plugin error:", e);
+        console.error(`[statekit-lite] Plugin error "${plugin.name}":`, e);
       }
     }
   }
@@ -213,51 +164,85 @@ function createStore(initialValue, options = {}) {
   return proxyStore;
 }
 
-// src/sse-plugin.ts
-function ssePlugin(options) {
-  const { url, path, mapper, mode = "set" } = options;
+// src/sync-plugin.ts
+function syncPlugin(options) {
   return (store) => {
-    const source = new EventSource(url);
-    source.onmessage = (event) => {
-      try {
-        const parsed = JSON.parse(event.data);
-        const data = mapper ? mapper(parsed) : parsed;
-        let target = store;
-        if (path) {
-          for (const key of path.slice(0, -1)) {
-            if (!(key in target)) return;
-            target = target[key];
-          }
-          const lastKey = path[path.length - 1];
-          if (mode === "push") {
-            const current = target[lastKey].get?.();
-            if (!Array.isArray(current)) {
-              target[lastKey].set([]);
-            }
-            target[lastKey].update((prev) => [...prev ?? [], data]);
-          } else {
-            target[lastKey].set(data);
-          }
-        } else {
-          store.set(data);
-        }
-      } catch (err) {
-        console.warn("[ssePlugin] \u041E\u0448\u0438\u0431\u043A\u0430 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438:", err);
+    const { subscribe, pushUpdate, mapper, debug, path } = options;
+    const log = (...args) => debug && console.log("[syncPlugin]", ...args);
+    const isRoot = !path || path.length === 0;
+    const target = isRoot ? store : path.reduce((acc, key) => acc?.[key], store);
+    if (!target || typeof target.set !== "function") {
+      log("\u274C invalid target at path:", path);
+      return () => {
+      };
+    }
+    let ignoreNext = false;
+    const unsubscribeRemote = subscribe((incoming) => {
+      const mapped = mapper ? mapper(incoming) : incoming;
+      log("\u2B07\uFE0F incoming:", mapped);
+      ignoreNext = true;
+      if (typeof mapped === "function") {
+        target.set(mapped);
+      } else {
+        target.set(() => mapped);
       }
+    });
+    const unsub = pushUpdate ? isRoot ? store.watch(() => {
+      if (ignoreNext) {
+        log("\u{1F6D1} skipping push (from remote)");
+        ignoreNext = false;
+        return;
+      }
+      const val = store.get?.(true);
+      log("\u2B06\uFE0F pushUpdate:", val);
+      if (val !== void 0) pushUpdate(val);
+    }) : target.watch((val) => {
+      if (ignoreNext) {
+        log("\u{1F6D1} skipping push (from remote)");
+        ignoreNext = false;
+        return;
+      }
+      log("\u2B06\uFE0F pushUpdate path:", val);
+      if (val !== void 0) pushUpdate(val);
+    }) : void 0;
+    return () => {
+      unsubscribeRemote?.();
+      unsub?.();
     };
-    source.onerror = (err) => {
-      console.warn("[ssePlugin] \u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F:", err);
-    };
-    const cleanup = () => {
-      source.close();
-      console.log("[ssePlugin] \u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u043E");
-    };
-    return cleanup;
   };
+}
+
+// src/plugins/sse-plugin.ts
+function ssePlugin(options) {
+  const { url, path, mapper, mode = "set", debug } = options;
+  return syncPlugin({
+    path,
+    debug,
+    subscribe: (emit) => {
+      const source = new EventSource(url);
+      source.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          const mapped = mapper ? mapper(data) : data;
+          if (debug) {
+            console.log("[ssePlugin] raw:", data);
+            console.log("[ssePlugin] mapped:", mapped);
+          }
+          if (mode === "push") {
+            emit((prev) => [...prev || [], mapped]);
+          } else emit(mapped);
+        } catch (err) {
+          if (debug) console.warn("[ssePlugin] parse error:", e.data);
+        }
+      };
+      return () => source.close();
+    }
+  });
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   createStore,
-  ssePlugin
+  ssePlugin,
+  syncPlugin
 });
 //# sourceMappingURL=index.cjs.map

@@ -138,8 +138,49 @@ userStore.user.watch((user) => {
 });
 ```
 
-## 🧩 Plugins Support (SSE Example)
+# 🧩 Plugins
 
+statekit-lite supports realtime sync via plugins.
+
+---
+
+### 🔄 `syncPlugin(options)`
+
+A universal plugin that connects any part of the store to remote data (SSE, WebSocket, polling, etc.).
+
+#### ✅ Features
+- Reactive sync from remote
+- Optional pushUpdate to server
+- Works on any nested path
+- Supports both full-replace and updater modes
+
+
+```ts
+  import { syncPlugin, createStore } from 'statekit-lite';
+
+  const store = createStore({ user: { name: '', age: 0 } }, {
+    plugins: [
+      syncPlugin({
+        subscribe: (emit) => {
+          const source = new EventSource('http://localhost:3000/events');
+          source.onmessage = (e) => emit(JSON.parse(e.data));
+          return () => source.close();
+        },
+        pushUpdate: (data) => {
+          fetch('/update', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: { 'Content-Type': 'application/json' },
+          });
+        },
+        debug: true,
+      }),
+    ]
+  });
+```
+
+### or ssePlugin
+Convenience wrapper around syncPlugin for Server-Sent Events (SSE).
 Enable realtime updates from a server:
 ```ts
   import { createStore, ssePlugin } from 'statekit-lite';
@@ -163,11 +204,6 @@ Enable realtime updates from a server:
     return <ul>{list.map((msg, i) => <li key={i}>{msg}</li>)}</ul>;
   }
 ```
-### 🧠 Plugin: ssePlugin(options)
-- `url`: Server-Sent Events endpoint
-- `path`: Where in the store to apply incoming data
-- `mode`: 'set' (default) replaces the value, 'push' adds to array
-- `mapper`: Optional function to transform data before applying
 
 ```ts
   type SSEPluginOptions<T> = {
@@ -182,7 +218,7 @@ Enable realtime updates from a server:
 ### 🔌 Realtime Server Example (Node.js + Express)
 Below is a minimal SSE backend you can use to push real-time updates into statekit-lite.
 
-#### 💡 → [Example of use](statekit-lite-production.up.railway.app/)   ←
+#### 💡 → [Example of use](https://statekit-lite-production.up.railway.app/)   ←
 
 ```ts
   // server.ts

@@ -1,10 +1,13 @@
 import { useSyncExternalStore } from "react";
 import { produce } from "immer";
 
-type ValueOrUpdater<T> = T | ((prev: T) => T);
-type StorePlugin = (store: ProxyState<any>) => void;
-export type Unsubscribe = () => void;
 
+type ValueOrUpdater<T> = T | ((prev: T) => T);
+export type StorePlugin = (store: ProxyState<any>) => void;
+type PersistConfig = boolean | { key: string };
+
+
+export type Unsubscribe = () => void;
 export type ProxyState<T> = {
     /** 
      *  🔗 `.get()` — object references  
@@ -25,11 +28,13 @@ export type ProxyState<T> = {
     update: (fn: (prev: T) => T) => void;
 
     /**
-     *  ⚛️ React hook that subscribes to this value  
-     *  Automatically triggers re-render when value changes  
-     *
-     *  📌 Must be called inside a React component or hook  
-     */
+    *  ⚛️ React hook that subscribes to this value. Automatically triggers re-render when value changes  
+    *
+    *  📌 Must be called inside a React component or hook  
+    *  Equivalent to `.get()` but reactive  
+    *
+    *  @returns Current value of the state at this path
+    */
     use: () => T;
 
     /**
@@ -54,15 +59,18 @@ export type ProxyState<T> = {
     }
     : {});
 
-type PersistConfig = boolean | { key: string };
+
 interface StoreOptions {
     /** 🛢️ localStorage `{key: 'myState'}` */
-    persist?: PersistConfig;
+    persist?: PersistConfig
     /** ⚛️ enable redux dev tool log */
-    devtools?: boolean | { name: string };
+    devtools?: boolean | { name: string }
     /** 🔧 default: false */
-    immer?: boolean;
-    plugins?: StorePlugin[];
+    immer?: boolean
+    /**
+     * 🧩 array plugins function
+     */
+    plugins?: StorePlugin[]
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -96,10 +104,7 @@ function pathToString(path: (string | number)[]) {
 //////////////////////////////////////////////////////////////////////////
 
 
-export function createStore<T extends object>(
-    initialValue: T,
-    options: StoreOptions = {}
-): ProxyState<T> {
+export function createStore<T extends object>(initialValue: T, options: StoreOptions = {}): ProxyState<T> {
     const key =
         typeof options.persist === "object"
             ? options.persist.key
@@ -131,9 +136,11 @@ export function createStore<T extends object>(
         }
     }
 
+
     const listeners = new Set<() => void>();
     const watchers = new Map<string, Set<(val: any) => void>>();
     const notify = () => listeners.forEach((l) => l());
+
 
     const store = {
         get: () => value,
@@ -158,25 +165,16 @@ export function createStore<T extends object>(
             listeners.add(cb);
             return () => listeners.delete(cb);
         },
-    };
+    }
 
     function createProxy(path: (string | number)[]): any {
         const pathStr = pathToString(path);
 
         const api = {
-            /** 
-             *  🔗 `.get()` - object references,     
-             *  🗐  `.get(true)`- structured clone 
-             */
             get: (clone = false) => {
                 const val = getByPath(store.get(), path);
                 return clone ? structuredClone(val) : val;
             },
-            /**
-             *  📌 `.set(value)` — direct replace   
-             *  🔁 `.set(prev => next)` — functional update  
-             *  🧠 `.set(draft => { draft.x = 1 })` — safe mutation via Immer   
-             */
             set: (val: any) => {
                 const prev = getByPath(store.get(), path);
 
@@ -192,41 +190,9 @@ export function createStore<T extends object>(
                 const next = fn(current);
                 store.set(setByPath(store.get(), path, next));
             },
-            /**
-             *  ⚛️ React hook that subscribes to this value. Automatically triggers re-render when value changes  
-             *
-             *  📌 Must be called inside a React component or hook  
-             *  Equivalent to `.get()` but reactive  
-             *
-             *  @returns Current value of the state at this path
-             */
             use: () => useSyncExternalStore(store.subscribe, () =>
                 getByPath(store.get(), path)
             ),
-            /**
-             *  👁 Subscribes to external (non-React) changes  
-             *  Useful for triggering side effects when a value changes  
-             *
-             *  Unlike `.use()`, works outside of React lifecycle  
-             *  You must manually unsubscribe to avoid memory leaks
-             * 
-             * @example
-             *  const unsubscribe = state.user.name.watch((val) => {
-             *      console.log("Changed:", val);
-             *  });
-             * // later
-             *  unsubscribe();
-             * 
-             * // or ract useEffect
-             * useEffect(() => {
-             *      const unsub = state.user.name.watch(console.log);
-             *      return unsub; // cleanup on unmount
-             *   }, []);
-             * 
-             * 
-             *  @param callback Function to call when value changes  
-             *  @returns Unsubscribe function
-             */
             watch: (fn: (val: any, unsub: Unsubscribe) => void) => {
                 if (!watchers.has(pathStr)) {
                     watchers.set(pathStr, new Set());
@@ -240,18 +206,9 @@ export function createStore<T extends object>(
                 const unsub = () => set.delete(wrapped);
                 return unsub;
             },
-            /**
-             *  🗐 Returns a deep copy of the current value  
-             *  Safe to mutate or serialize (e.g. for export, snapshot, send to server)  
-             *
-             *  Functions and components are preserved by reference  
-             *  Proxy and reactivity are stripped
-             *
-             *  @returns Deep cloned plain value
-             */
             export: () => safeClone(getByPath(store.get(), path)),
             toJSON: () => getByPath(store.get(), path),
-        };
+        }
 
         return new Proxy(api, {
             get(target, prop) {
@@ -273,14 +230,15 @@ export function createStore<T extends object>(
                 }
             } 
             catch (e) {
-                console.warn('[statekit-lite] Plugin error:', e);
+                console.error(`[statekit-lite] Plugin error "${plugin.name}":`, e);
             }
         }
     }
 
     (proxyStore as any).dispose = () => {
         cleanups.forEach(fn => fn());
-    };
+    }
+
 
     return proxyStore;
 }

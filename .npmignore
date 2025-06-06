@@ -1,0 +1,11 @@
+index.js
+*.ts
+*.tsx
+src/
+tests/
+.vscode/
+.vite/
+vite.config.*
+tsconfig.json
+build/
+*.log

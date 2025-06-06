@@ -1,5 +1,8 @@
 type ValueOrUpdater<T> = T | ((prev: T) => T);
 type StorePlugin = (store: ProxyState<any>) => void;
+type PersistConfig = boolean | {
+    key: string;
+};
 type Unsubscribe = () => void;
 type ProxyState<T> = {
     /**
@@ -18,11 +21,13 @@ type ProxyState<T> = {
      */
     update: (fn: (prev: T) => T) => void;
     /**
-     *  ⚛️ React hook that subscribes to this value
-     *  Automatically triggers re-render when value changes
-     *
-     *  📌 Must be called inside a React component or hook
-     */
+    *  ⚛️ React hook that subscribes to this value. Automatically triggers re-render when value changes
+    *
+    *  📌 Must be called inside a React component or hook
+    *  Equivalent to `.get()` but reactive
+    *
+    *  @returns Current value of the state at this path
+    */
     use: () => T;
     /**
      *  👁 Subscribes to external (non-React) changes
@@ -42,9 +47,6 @@ type ProxyState<T> = {
 } & (T extends object ? {
     [K in keyof T]: ProxyState<T[K]>;
 } : {});
-type PersistConfig = boolean | {
-    key: string;
-};
 interface StoreOptions {
     /** 🛢️ localStorage `{key: 'myState'}` */
     persist?: PersistConfig;
@@ -54,23 +56,71 @@ interface StoreOptions {
     };
     /** 🔧 default: false */
     immer?: boolean;
+    /**
+     * 🧩 array plugins function
+     */
     plugins?: StorePlugin[];
 }
 declare function createStore<T extends object>(initialValue: T, options?: StoreOptions): ProxyState<T>;
 
 type SSEPluginOptions<T> = {
-    /**🌐 URL path endpoint SSE */
+    /** 🌐 URL path endpoint SSE */
     url: string;
-    /** Путь в store: ['messages'] или ['chat', 'list'] */
+    /** Path inside the store, e.g., ['messages'] or ['chat', 'list'] */
     path?: (string | number)[];
-    /** Преобразование данных перед установкой */
+    /** Transforms incoming data before applying to the store */
     mapper?: (data: any) => T;
     /**
-     * Поведение: 'set' (по умолчанию) — перезапись значения,
-     * или 'push' — добавление в массив
+     * Mode:
+     * - 'set' (default): replaces the store value
+     * - 'push': appends to an array
      */
     mode?: 'set' | 'push';
+    /** Enables debug logging */
+    debug?: boolean;
 };
-declare function ssePlugin<T = any>(options: SSEPluginOptions<T>): (store: ProxyState<any>) => Unsubscribe;
+declare function ssePlugin<T = any>(options: SSEPluginOptions<T>): StorePlugin;
 
-export { createStore, ssePlugin };
+interface SyncPluginOptions<T = any> {
+    /**
+     * Subscribes to remote data source (e.g. SSE, WebSocket, polling).
+     * You must call `emit(data)` whenever new data arrives.
+     * Returns an unsubscribe function.
+     */
+    subscribe: (emit: (data: T | ((prev: T) => T)) => void) => () => void;
+    /**
+     * Optional: pushes local store changes to a remote destination.
+     * Called every time the specified store path is updated.
+     */
+    pushUpdate?: (data: T) => void;
+    /**
+     * Optional: transforms incoming data before setting it to the store.
+     */
+    mapper?: (incoming: any) => T;
+    /**
+     * Optional: path to the specific store key you want to sync.
+     * Example: ['chat', 'messages'] to target store.chat.messages.
+     * If omitted, the root store will be used.
+     */
+    path?: (string | number)[];
+    /**
+     * Optional: enables debug logging for all incoming/outgoing events.
+     */
+    debug?: boolean;
+}
+/**
+ * Creates a synchronization plugin for statekit-lite.
+ *
+ * This plugin allows you to connect a piece of store state to a remote source,
+ * such as Server-Sent Events, WebSocket, or polling, and optionally push updates
+ * back to the server whenever the state changes.
+ *
+ * You can specify a nested path within the store to target a specific key,
+ * and customize the synchronization behavior via optional mapper and debug options.
+ *
+ * @param options - Configuration for data subscription and update behavior
+ * @returns A store plugin function compatible with statekit-lite
+ */
+declare function syncPlugin<T>(options: SyncPluginOptions<T>): StorePlugin;
+
+export { createStore, ssePlugin, syncPlugin };
