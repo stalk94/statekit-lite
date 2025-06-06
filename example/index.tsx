@@ -1,8 +1,9 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Updater, Display, MessagesList, MessagesListWs } from './App'
+import Base from './Base';
 import Spb from './Supabase';
-
+import './style.css';
 
 type TopBarProps = {
     setRenderMod: (mod: 'base'|'sse')=> void
@@ -43,10 +44,6 @@ function TopBar({ setRenderMod, mod }: TopBarProps) {
 
     return (
         <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
             padding: '15px 20px',
             background: '#222',
             color: '#c5f467',
@@ -68,10 +65,15 @@ function TopBar({ setRenderMod, mod }: TopBarProps) {
 
 // Root component
 export function App() {
-    const [mod, setMod] = React.useState<'base'|'ws'|'sse'>('base');
+    const [mod, setMod] = React.useState<'base'|'ws'|'sse'|'spb'>('base');
 
     const useRender =()=> {
-        if(mod === 'base') return <Display />
+        if(mod === 'base') return (
+            <div style={{display:'flex', width:'100%', flexDirection:'row'}}>
+                <Display />
+                <Base/>
+            </div>
+        )
         else if(mod === 'sse') return <MessagesList />
         else if(mod === 'ws') return <MessagesListWs />
         else if(mod === 'spb') return <Spb />
@@ -79,12 +81,11 @@ export function App() {
 
 
     return (
-        <div>
+        <div style={{height:'100%', width:'100%'}}>
             <TopBar
                 mod={mod}
                 setRenderMod={setMod}
             />
-            <Updater />
             { useRender() }
         </div>
     );

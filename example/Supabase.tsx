@@ -1,12 +1,13 @@
 import React from 'react';
 import { createStore, supabasePlugin } from '../src/index';
+import secret from './_core';
 
 
 const store = createStore({count: 1, update: Date.now()}, {
     plugins: [
         supabasePlugin({
-            url: 'https://bhgrcocadwsejwodvzql.supabase.co',
-            anon_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoZ3Jjb2NhZHdzZWp3b2R2enFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg2MzY5NTksImV4cCI6MjA2NDIxMjk1OX0.ijFGDKECfWYBULzTDUtIJMFaAJN1N-70ygQSzMONQIg',
+            url: secret.url,
+            anon_key: secret.anon_key,
             table: 'kv_store',
             key: 'user-5421748935',
             debug: true,
@@ -18,13 +19,11 @@ const store = createStore({count: 1, update: Date.now()}, {
 
 export default function() {
     
-
-
     return(
         <div style={{ marginTop: '80px'}}>
             <div style={{display: 'flex', flexDirection: 'column', margin: 'auto'}}>
                 <div style={{display:'flex', margin: 'auto', padding: 'auto'}}>
-                    <div style={{ color:'orange' }}>
+                    <div style={{ color:'orange', fontSize:'20px' }}>
                         ALL COUNT CLICK:
                     </div>
                     <div style={{ color:'red', marginLeft: 10, fontWeight:'bold', fontSize:'20px' }}> 
@@ -42,7 +41,7 @@ export default function() {
                         fontWeight: 'bold',
                         cursor: 'pointer',
                         margin: 'auto',
-                        marginTop: '10px'
+                        marginTop: '16px'
                     }}
                 >
                     + add your click

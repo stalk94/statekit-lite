@@ -9,3 +9,4 @@ vite.config.*
 tsconfig.json
 build/
 *.log
+.env
