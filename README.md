@@ -182,6 +182,8 @@ Enable realtime updates from a server:
 ### 🔌 Realtime Server Example (Node.js + Express)
 Below is a minimal SSE backend you can use to push real-time updates into statekit-lite.
 
+#### 💡 → [Example of use](statekit-lite-production.up.railway.app/)   ←
+
 ```ts
   // server.ts
   import express from 'express';
